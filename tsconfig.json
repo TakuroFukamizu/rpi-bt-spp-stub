@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "strictNullChecks": true,
+        "noUnusedLocals" : true,
+        "noImplicitThis": true,
+        "alwaysStrict": true,
+        "outDir": "./dist/",
+        "sourceMap": true,
+        "noImplicitAny": true,
+        "lib": ["dom", "es6"],
+        "module": "es6",
+        "target": "es6"
+    },
+    "exclude": [
+        "node_modules"
+    ],
+    "files": [
+      "src/main.ts"
+    ]
+}
