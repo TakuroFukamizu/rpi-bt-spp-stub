@@ -3,8 +3,10 @@ const server = new(require('bluetooth-serial-port')).BluetoothSerialPortServer()
 
 export class SerialManager {
     server : any;
+    newLine : String;
 
     constructor(uuid: string, channel: number) {
+        this.newLine = '\n';
         this.server = server;
         server.listen((clientAddress:string) => {
             console.log('Client: ' + clientAddress + ' connected!');
@@ -18,13 +20,16 @@ export class SerialManager {
             channel: channel
         });
     }
-    sendTextAsync(text : string) {
+    sendTextAsync(text : string, withNewLine=true) {
+        if (!this.server.isOpen()) return Promise.reject(new Error('not connected'));
+        
         return new Promise((resolve, reject) => {
-            this.server.write(new Buffer(text), (err:any, bytesWritten:Buffer) => {
+            let value = withNewLine ? new Buffer(text+this.newLine) : new Buffer(text);
+            this.server.write(value, (err:any, bytesWritten:number) => {
                 if (err) {
                     reject(err);
                 } else {
-                    console.log('Send ' + bytesWritten + ' to the client!');
+                    console.log(`send message : ${text}`);
                     resolve();
                 }
             });

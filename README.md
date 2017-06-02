@@ -24,6 +24,24 @@ $ apt-get install build-essential libbluetooth-dev
 $ npm i
 ```
 
+```bash
+$ sudo vi /lib/systemd/system/bluetooth.service
+```
+
+and adding the --compat flag to the ExecStart value:
+
+```
+ExecStart=/usr/lib/bluetooth/bluetoothd--compat
+```
+
+```
+$ sudo systemctl daemon-reload
+$ sudo systemctl restart bluetooth
+$ sudo chmod 777 /var/run/sdp
+$ sudo hciconfig hci0 up
+$ sudo hciconfig hci0 piscan
+```
+
 ### Build and run
 
 build scripts

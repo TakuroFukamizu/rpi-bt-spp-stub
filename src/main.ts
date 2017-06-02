@@ -1,82 +1,82 @@
 'use strict';
 
-const GPIO = require('node-pi-gpio');
-
 import {ButtonBehavior} from './lib/ButtonBehavior';
 import {SerialManager} from './lib/SerialManager';
+import {LedBehavior} from './lib/LedBehavior';
 
 
-const CHANNEL = 10; // My service channel. Defaults to 1 if omitted.
-const UUID = '38e851bc-7144-44b4-9cd8-80549c6f2912'; // My own service UUID. Defaults to '1101' if omitted
+const CHANNEL = 10;
+const UUID = '00001101-0000-1000-8000-00805F9B34FB'; //Bluetooth SPP generic
 
 const serial = new SerialManager(UUID, CHANNEL);
 let buttons : ButtonBehavior[] = [];
 
-let extStartup : () => Promise<any>[];
-let extDispose : () => Promise<any>[];
+let extStartup : () => Promise<any>;
+let extDispose : () => Promise<any>;
 
 // --------------------------------------------
 // YOUR APPLICATION START HERE
 // --------------------------------------------
 
-const PIN_LED_S = 14;
+// Pin assigns
+const PIN_BTN_B = 19; // Short(< 3sec), Long(< 5sec), Extra Long(5sec=<) 
+const PIN_BTN_R = 20; // All
+const PIN_LED_S = 4;
 
-let led : any = null;
+let led = new LedBehavior(PIN_LED_S); // LED // status led
 
-function sendCommand(text : string) {
-    led.value(1);
-    serial.sendTextAsync(text).then(() => {
-        led.value(0);
-    }).catch((e) => {
-        console.error(e);
-        led.value(0);
-    });
+async function sendCommand(text : string) {
+    led.turnOn();
+    try {
+        await serial.sendTextAsync(text);
+    } finally {
+        led.turnOff();
+    }
 }
 
 // -----------
 
-let btn1 = new ButtonBehavior('Button1 use GPIO19', 19);
-btn1.setShortEvent((val) => {
-    sendCommand('Button1 was clicked.');
-});
-btn1.setLongEvent(3, (val) => {
-    sendCommand('Button1 was long-clicked.');
-});
-buttons.push(btn1);
+let btnB = new ButtonBehavior('ButtonB', PIN_BTN_B);
+btnB.setShortEvent(       (val) => { sendCommand('ButtonB Short'); });
+btnB.setLongEvent(3,      (val) => { sendCommand('ButtonB Long:3sec'); });
+btnB.setExtraLongEvent(5, (val) => { sendCommand('ButtonB ExtraLong:5sec'); });
+buttons.push(btnB);
 
-let btn2 = new ButtonBehavior('Button2 use GPIO20', 20);
-btn2.setShortEvent((val) => {
-    sendCommand('Button2 was clicked.');
-});
-buttons.push(btn2);
+let btnR = new ButtonBehavior('ButtonR', PIN_BTN_R);
+btnR.setShortEvent(       (val) => { sendCommand('ButtonR All'); });
+buttons.push(btnR);
 
-extStartup = () => {
-    return [ GPIO.open(PIN_LED_S, 'out').then((res:any) => {
-        led = res; // LED
-    }) ];
+extStartup = async () => {
+    await led.init();
 };
 
-extDispose = () => {
-    led.value(0);
-
-    return [ 
-        led.close() // LED
-    ];
+extDispose = async () => {
+    await led.dispose();
 };
 
 // --------------------------------------------
 // YOUR APPLICATION END HERE
 // --------------------------------------------
 
-Promise.all(extStartup().concat(buttons.map( (btn) => btn.open() )) ).then(() => {
+// main process
+(async () => {
+    console.info('start ini...');
+
+    try {
+        await extStartup();
+        await buttons.forEach( (btn) => btn.open());
+    } catch(e) {
+        console.error('init is failed', e);
+        process.exit(1);
+    } 
+
     // main process is runing...
-    process.on('SIGINT', () => {
-        Promise.all(extDispose().concat(buttons.map( (btn) => btn.close()) )).then(() => {
-            process.exit();
-        });
+    console.info('running');
+
+    process.on('SIGINT', async () => {
+        await extDispose();
+        await buttons.forEach( (btn) => btn.close());
+        process.exit();
     });
-}).catch((err:Error) => {
-    console.error('err', err.stack);
-});
-    
+})();
 
