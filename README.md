@@ -53,5 +53,6 @@ $ npm run build
 run script
 
 ```bash
-$ node dist/main.js
+# execute generated script.
+$ npm run start
 ```
